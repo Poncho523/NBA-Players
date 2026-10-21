@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 # exclusivas de Advanced.
 OVERLAP = ["player_name", "age", "pos", "games", "games_started", "mp", "awards_raw"]
 
-KEY = ["player_id", "team", "season"]
+# Antes era: KEY = ["player_id", "team", "season"]
+# Cámbialo a:
+KEY = ["player_id", "season"] 
 
 
 def merge_season(totals: pd.DataFrame, advanced: pd.DataFrame) -> pd.DataFrame:
