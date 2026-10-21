@@ -1,0 +1,5 @@
+seasons: [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+target: {column: bpm, threshold: 0}
+leaky_columns: [bpm, obpm, dbpm, vorp]
+min_games_played: 20
+random_seed: 42
