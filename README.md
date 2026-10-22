@@ -6,6 +6,19 @@ La definición operativa del target es: **Un jugador es "bueno" si su BPM (Box P
 
 ---
 
+## 📥 Obtención de Datos 
+
+Los archivos HTML crudos (`data/raw/`) no se suben a GitHub para mantener el repositorio ligero. 
+Sin embargo, **el modelo ya entrenado SÍ está incluido** en `models/classifier_pipeline.joblib`, por lo que el profesor o cualquier persona puede hacer predicciones sin necesidad de descargar datos.
+
+Si necesitas **reentrenar el modelo** o modificar la limpieza, tienes dos opciones:
+
+1. **Descargar los datos manuales:** Descarga el archivo `.zip` con los HTML desde [https://drive.google.com/file/d/1xaYXqb25GPCB_v-Q0tleOoDYPm2vpnxm/view?usp=drive_link] y descomprímelo dentro de la carpeta `data/raw/`.
+2. **Correr el scraper (si no hay bloqueos de IP):** 
+   ```bash
+   PYTHONPATH=src python -m nba_classifier.data.scraper --seasons 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024 2025 2026
+
+
 ## 🏗️ Arquitectura y Fisiología del Proyecto
 
 El proyecto sigue una **arquitectura modular orientada al flujo de datos**, evitando el código espagueti y facilitando que varios integrantes trabajen en paralelo.
@@ -87,7 +100,7 @@ Como
     pip install -r requirements.txt
 
     (Importante) Para que Python reconozca el código fuente dentro de src/, debes correr los comandos usando PYTHONPATH=src.
-    Alternativa recomendada: crear un archivo pyproject.toml y correr pip install -e .
+    
 
 🛠️ Guía para el Equipo: ¿Dónde modificar qué?
 
