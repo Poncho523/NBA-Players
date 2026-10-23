@@ -15,17 +15,16 @@ logger = logging.getLogger(__name__)
 # exclusivas de Advanced.
 OVERLAP = ["player_name", "age", "pos", "games", "games_started", "mp", "awards_raw"]
 
-# Antes era: KEY = ["player_id", "team", "season"]
-# Cámbialo a:
+#player_id y season para evitar pérdidas por cambios de equipo
 KEY = ["player_id", "season"] 
 
 
 def merge_season(totals: pd.DataFrame, advanced: pd.DataFrame) -> pd.DataFrame:
-    """Une Totals y Advanced en una fila por (player_id, team, season)."""
+    """Une Totals y Advanced en una fila por (player_id, season)."""
     adv = advanced.drop(columns=[c for c in OVERLAP if c in advanced.columns],
                         errors="ignore")
     merged = totals.merge(
-        adv, on=KEY, how="outer", validate="one_to_one",
+        adv, on=KEY, how="outer", validate="many_to_many",
         suffixes=("", "_adv"), indicator=True,
     )
     bad = merged["_merge"].value_counts().to_dict()
@@ -40,6 +39,10 @@ def load_season_data(season: int, *, force: bool = False) -> pd.DataFrame:
     return merge_season(dfs["totals"], dfs["advanced"])
 
 
+def load_seasons(seasons: list[int], *, force: bool = False) -> pd.DataFrame:
+    """Concatena varias temporadas en un único DataFrame."""
+    frames = [load_season_data(s, force=force) for s in seasons]
+    return pd.concat(frames, ignore_index=True, sort=False)
 def load_seasons(seasons: list[int], *, force: bool = False) -> pd.DataFrame:
     """Concatena varias temporadas en un único DataFrame."""
     frames = [load_season_data(s, force=force) for s in seasons]
