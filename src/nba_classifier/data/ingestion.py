@@ -17,8 +17,7 @@ OVERLAP = ["player_name", "age", "pos", "games", "games_started", "mp", "awards_
 
 # Antes era: KEY = ["player_id", "team", "season"]
 # Cámbialo a:
-KEY = ["player_id", "team", "season"] 
-
+KEY = ["player_id", "season"]
 
 def merge_season(totals: pd.DataFrame, advanced: pd.DataFrame) -> pd.DataFrame:
     """Une Totals y Advanced en una fila por (player_id, team, season)."""
