@@ -1,0 +1,7 @@
+# Entorno virtual de Python
+nba_players_entorno/
+
+# Archivos temporales de Linux y Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
