@@ -17,7 +17,7 @@ MAX_RETRIES = 5
 COLUMN_RENAMES = {"name_display": "player_name", "team_name_abbr": "team"}
 DROP_COLS = ["ranker"]
 
-def _session():
+def _session(): 
     return cloudscraper.create_scraper()
 
 def _cache_path(season: int, kind: str) -> Path:
