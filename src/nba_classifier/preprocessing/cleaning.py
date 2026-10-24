@@ -28,12 +28,31 @@ def clean_season_df(df: pd.DataFrame, min_games: int = 20) -> pd.DataFrame:
     
     return df
 
+
 def build_target(df: pd.DataFrame, threshold: float = 0.0) -> pd.DataFrame:
-    """Crea la columna objetivo 'y' basada en el BPM."""
+    """Crea la variable objetivo únicamente cuando existe BPM."""
+
     df = df.copy()
-    # y = 1 si BPM > 0, sino 0
-    df['y'] = (df['bpm'] > threshold).astype(int)
+
+    # Convertir BPM a numérico, por seguridad
+    df["bpm"] = pd.to_numeric(df["bpm"], errors="coerce")
+
+    # Identificar jugadores sin BPM
+    faltantes = df["bpm"].isna().sum()
+
+    logger.warning(
+        "Jugadores sin BPM: %s. No se pueden etiquetar.",
+        faltantes
+    )
+
+    # Conservar únicamente registros con BPM conocido
+    df = df.dropna(subset=["bpm"]).copy()
+
+    # Crear la clasificación
+    df["y"] = (df["bpm"] > threshold).astype(int)
+
     return df
+
 
 
 def drop_leaky_columns(df: pd.DataFrame) -> pd.DataFrame:
