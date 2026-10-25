@@ -1,152 +1,147 @@
-# NBA Player Classifier
+# 🏀 NBA Player Impact Classifier
 
-Este proyecto tiene como objetivo construir un clasificador de Machine Learning que prediga si un jugador de la NBA tendrá un rendimiento "bueno" o "malo" basándose en sus estadísticas de temporada.
+Un sistema de *Machine Learning* de nivel de producción diseñado para predecir si un jugador de la NBA tendrá un impacto positivo en la cancha basándose **únicamente en métricas de eficiencia y ritmo**, evitando por completo el *Data Leakage*.
 
-La definición operativa del target es: **Un jugador es "bueno" si su BPM (Box Plus/Minus) es mayor a 0**, y "malo" si es menor o igual a 0. El BPM es una métrica avanzada que mide la contribución del jugador respecto al promedio de la liga.
+## 📌 Descripción del Proyecto
+
+El objetivo de este proyecto es clasificar a los jugadores de la NBA como **"Buenos" (Impacto Positivo)** o **"Malos" (Rotación/Recambio)**. 
+
+Para definir un jugador "Bueno", se estableció un umbral estricto de **BPM (Box Plus/Minus) >= +1.5**. Esto asegura que el modelo aprenda a identificar a verdaderos jugadores de impacto (titulares y estrellas) y no a jugadores marginales.
+
+### 🛡️ Enfoque Anti-Data Leakage
+Uno de los mayores desafíos en *Sports Analytics* es no hacer "trampa". Métricas compuestas como `PER`, `WS` o el propio `BPM` contienen la respuesta que intentamos predecir. Por lo tanto, **este modelo excluye estas variables** y se entrena exclusivamente con estadísticas de tasa (porcentajes y métricas normalizadas por posesión) como `ts_pct`, `ast_pct`, `usg_pct`, etc.
 
 ---
 
-## 📥 Obtención de Datos 
+## 🏗️ Arquitectura y Flujo de Trabajo (Pipeline)
 
-Los archivos HTML crudos (`data/raw/`) no se suben a GitHub para mantener el repositorio ligero. 
-Sin embargo, **el modelo ya entrenado SÍ está incluido** en `models/classifier_pipeline.joblib`, por lo que el profesor o cualquier persona puede hacer predicciones sin necesidad de descargar datos.
+El proyecto está diseñado con una arquitectura modular, separando claramente la ingesta de datos, el preprocesamiento, el modelado y la inferencia. 
 
-Si necesitas **reentrenar el modelo** o modificar la limpieza, tienes dos opciones:
-
-1. **Descargar los datos manuales:** Descarga el archivo `.zip` con los HTML desde [https://drive.google.com/file/d/1xaYXqb25GPCB_v-Q0tleOoDYPm2vpnxm/view?usp=drive_link] y descomprímelo dentro de la carpeta `data/raw/`.
-2. **Correr el scraper (si no hay bloqueos de IP):** 
-   ```bash
-   PYTHONPATH=src python -m nba_classifier.data.scraper --seasons 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024 2025 2026
-
-
-## 🏗️ Arquitectura y Fisiología del Proyecto
-
-El proyecto sigue una **arquitectura modular orientada al flujo de datos**, evitando el código espagueti y facilitando que varios integrantes trabajen en paralelo.
-
-El flujo de ejecución (la "fisiología") funciona así:
-
-1. **Ingesta (`data/ingestion.py` + `data/scraper.py`)**: 
-   Extrae las estadísticas (Totals y Advanced) de Basketball-Reference. Guarda una caché en HTML (`data/raw/`) para no saturar la página y evita bloqueos.
-2. **Validación (`data/validation.py`)**:
-   Revisa que los datos crudos tengan las columnas necesarias y no tengan valores imposibles (ej. porcentajes mayores a 1 o jugadores con más de 82 partidos).
-3. **Limpieza (`preprocessing/cleaning.py`)**:
-   Se encarga del control de calidad. Elimina las filas duplicadas de jugadores que cambiaron de equipo a mitad de temporada (dejando solo su fila agregada `2TM`/`3TM`), arregla las posiciones múltiples (`PG-SG` -> `PG`) y filtra a los jugadores con pocos minutos.
-4. **Feature Engineering (`preprocessing/features.py`)**:
-   Crea el target (`y = BPM > 0`) y elimina las columnas con *Data Leakage* (BPM, OBPM, DBPM y VORP), ya que son las variables que queremos predecir.
-5. **Entrenamiento (`models/train.py`)**:
-   Es el **director de orquesta**. Llama a los módulos anteriores, arma un `Pipeline` de Scikit-Learn (que imputa nulos, escala datos y entrena) y compara 6 clasificadores distintos (Regresión Logística, Random Forest, SVM, etc.).
-6. **Predicción (`models/predict.py`)**:
-   Carga el mejor modelo guardado (`models/classifier_pipeline.joblib`) y recibe las estadísticas de un nuevo jugador para predecir si es bueno o malo.
-
-**Diagrama de Flujo:**
-```text
-[data/raw/*.html]
-       |
-       v
-  (ingestion.py) ---> [DataFrame Sucio]
-       |
-       v
-  (cleaning.py)  ---> [DataFrame Limpio, 1 fila por jugador/temporada]
-       |
-       v
-  (features.py)  ---> [X e y, sin variables con leakage]
-       |
-       v
-  (train.py)     ---> [Pipeline Entrenado] ---> [models/classifier_pipeline.joblib]
-                                                       |
-                                                       v
-                                                 (predict.py)
-
-📂 Estructura de Directorios
-
-nba_players/
-├── configs/                  # Parámetros globales (YAML)
-├── data/
-│   ├── raw/                  # Archivos HTML descargados de B-Ref (NO se suben a Git)
-│   └── processed/            # Datos listos para el modelo (opcional)
-├── models/                   # Archivo .joblib con el pipeline entrenado
-├── notebooks/                # Jupyter Notebooks para exploración y pruebas
-├── src/
-│   └── nba_classifier/       # Código fuente principal
-│       ├── data/             # Scraper, ingesta y validación
-│       ├── preprocessing/    # Limpieza y creación de variables
-│       ├── models/           # Entrenamiento y predicción
-│       ├── evaluation/       # Métricas y gráficas
-│       └── main.py           # Script de consola (Train / Predict)
-├── tests/                    # Pruebas unitarias
-├── requirements.txt          # Dependencias
-└── README.md
-
-
-Como  
-
-🚀 Cómo empezar (Setup)
-
-    Clona el repositorio y entra a la carpeta:
-    bash
-
-    git clone <url-del-repo>
-    cd nba_players
-
-    Crea y activa un entorno virtual:
-    bash
-
-    python3 -m venv nba_players_entorno
-    source nba_players_entorno/bin/activate  # En Windows: nba_players_entorno\Scripts\activate
-
-    Instala las dependencias:
-    bash
-
-    pip install -r requirements.txt
-
-    (Importante) Para que Python reconozca el código fuente dentro de src/, debes correr los comandos usando PYTHONPATH=src.
+```mermaid
+graph TD
+    A[Ingesta de Datos <br> ingestion.py] -->|Datos crudos 2015-2026| B[Limpieza y Target <br> cleaning.py]
+    B -->|Datos limpios y etiquetados| C{Entrenamiento <br> train.py}
+    C -->|GroupKFold por Temporada| D[Evaluación y Selección]
+    D -->|Mejor Modelo: SVM| E[(Modelo Guardado <br> .joblib)]
     
+    F[Usuario / Profesor] -->|Ingresa Stats Básicas| G[Inferencia <br> inference.py]
+    E -->|Carga el Pipeline| G
+    G -->|Calcula Métricas Avanzadas| H[Predicción Final]
+```
 
-🛠️ Guía para el Equipo: ¿Dónde modificar qué?
+### Flujo paso a paso:
+1. **Ingesta (`ingestion.py`):** Descarga y consolida los datos históricos de la NBA (2015-2026).
+2. **Preprocesamiento (`cleaning.py`):** 
+   - Filtra jugadores con menos de 20 partidos jugados.
+   - Maneja duplicados de jugadores que cambiaron de equipo a mitad de temporada (`2TM`, `3TM`).
+   - Construye la variable objetivo (`y = 1` si `BPM >= 1.5`).
+   - Elimina métricas compuestas (Data Leakage).
+3. **Modelado (`train.py`):** 
+   - Aplica `StandardScaler` a las métricas numéricas y `OneHotEncoder` a la posición (`pos`).
+   - Utiliza **`GroupKFold`** (agrupado por temporada) para evitar que el modelo haga trampa viendo el futuro.
+   - Entrena y compara 6 algoritmos (SVM, Logística, Random Forest, etc.).
+4. **Inferencia (`inference.py`):** Módulo interactivo de consola que traduce las estadísticas básicas del usuario (Puntos, Rebotes, Minutos) a métricas avanzadas y devuelve la clasificación.
 
-Si necesitan hacer cambios o experimentar, no toquen todo el código. Vayan directo al archivo que corresponde:
+---
 
-    "Quiero probar un modelo nuevo (ej. XGBoost)":
-    Ve a src/nba_classifier/models/train.py, importa el modelo y agrégalo al diccionario modelos. El Pipeline se encargará del resto.
+## 📓 Notebooks de Análisis (EDA e Interpretabilidad)
 
-    "Quiero cambiar el umbral de lo que consideramos un 'buen' jugador":
-    Ve a src/nba_classifier/preprocessing/cleaning.py y cambia el threshold en la función build_target (ej. threshold=2.0).
+La carpeta `notebooks/` contiene el análisis exploratorio y la justificación técnica del modelo. Estos notebooks documentan el "por qué" detrás de las decisiones del pipeline:
 
-    "Quiero quitar o agregar variables predictoras":
-    Ve a src/nba_classifier/models/train.py y modifica las listas numeric_features y categorical_features.
+*   **`01_eda.ipynb` (Análisis Exploratorio de Datos):**
+    *   Análisis univariado de las distribuciones (histogramas y boxplots).
+    *   Análisis de correlación (matriz de Pearson) para detectar multicolinealidad entre variables.
+    *   Estudio del balance del target y sesgo de las clases.
+*   **`02_interpretabilidad_y_evaluacion.ipynb` (Resultados del Modelo):**
+    *   Curva ROC y cálculo del AUC.
+    *   Matriz de Confusión detallada (Trade-off entre Falsos Positivos y Falsos Negativos en el *scouting*).
+    *   Importancia de las variables (Top Features) para entender qué métricas definen verdaderamente a un jugador de impacto.
+    *   Comparativa de rendimiento entre validación histórica (CV) y prueba futura (Test 2026).
 
-    "Quiero filtrar a los jugadores con menos partidos":
-    Ve a src/nba_classifier/preprocessing/cleaning.py y cambia el min_games=20 por el número que deseen.
+---
 
-    "Quiero cambiar cómo se descargan los datos":
-    Ve a src/nba_classifier/data/scraper.py o ingestion.py.
+## 📂 Estructura del Repositorio
 
-⚠️ Decisiones Metodológicas Clave (No modificar a la ligera)
+```text
+nba_players/
+├── configs/                  # Archivos de configuración del proyecto
+├── data/                     # Datos crudos y procesados
+├── models/                   # Pipeline entrenado listo para producción (.joblib)
+├── notebooks/                # Jupyter Notebooks (EDA e Interpretabilidad)
+│   ├── 01_eda.ipynb
+│   └── 02_interpretabilidad.ipynb
+├── src/
+│   └── nba_classifier/
+│       ├── data/
+│       │   ├── ingestion.py  # Descarga de datos
+│       │   └── scraper.py    # Scraping auxiliar
+│       ├── preprocessing/
+│       │   └── cleaning.py   # Limpieza, target y drop de leakage
+│       ├── models/
+│       │   └── train.py      # Entrenamiento y evaluación de modelos
+│       └── inference.py      # Script CLI para predecir nuevos jugadores
+├── tests/                    # Pruebas unitarias (pytest)
+├── requirements.txt          # Dependencias del proyecto
+└── README.md
+```
 
-    Cero Data Leakage: Las variables bpm, obpm, dbpm y vorp se eliminan explícitamente antes de entrenar. El modelo debe predecir usando el resto de estadísticas, no usando la respuesta.
+## ⚙️ Instalación
 
-    Validación Temporal: El modelo siempre se entrena con temporadas pasadas (ej. 2015-2025) y se prueba con la temporada más reciente (2026). Esto simula un escenario del mundo real y evita que el modelo "haga trampa" memorizando a los jugadores.
+1. Clona este repositorio:
+   ```bash
+   git clone https://github.com/tu-usuario/nba_players.git
+   cd nba_players
+   ```
 
-    Un solo registro por jugador/temporada: Si un jugador es traspasado (ej. aparece como 2TM, LAC y CLE), la limpieza se queda únicamente con la fila de totales (2TM) para no duplicar su impacto en el entrenamiento.
+2. Crea y activa un entorno virtual:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # En Windows: venv\Scripts\activate
+   ```
 
-    Pipeline Integrado: La limpieza final (imputación de nulos, escalado y One-Hot Encoding) viaja dentro del archivo .joblib. El script de predicción no requiere hacer limpieza manual, el Pipeline lo hace solo.
+3. Instala las dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-💻 Comandos Útiles
+## 🎮 Uso
 
-Para descargar datos (Scraper):
-(Asegúrate de tener los HTML en data/raw/ para evitar bloqueos de Cloudflare)
-bash
-
-PYTHONPATH=src python -m nba_classifier.data.scraper --seasons 2026
-
-Para entrenar el modelo y ver la tabla comparativa:
-bash
-
+### 1. Entrenar el Modelo
+Para descargar los datos, limpiar, construir el target y entrenar los modelos:
+```bash
 PYTHONPATH=src python -m nba_classifier.models.train
+```
+*El mejor modelo se guardará automáticamente en `models/classifier_pipeline.joblib`.*
 
-Para hacer una predicción de prueba (lo que hará el profesor):
-bash
+### 2. Clasificar un Jugador (Inferencia)
+Para usar el modelo entrenado e ingresar las estadísticas de un jugador:
+```bash
+PYTHONPATH=src python -m nba_classifier.inference
+```
+*El script te pedirá los datos por consola. Si no conoces alguna métrica, simplemente presiona `Enter` y usará el promedio histórico de la NBA para ese campo.*
 
-PYTHONPATH=src python -m nba_classifier.models.predict
+## 📊 Resultados y Metodología
 
-Proyecto desarrollado para la asignatura de AyVD.
+Se evaluaron múltiples algoritmos utilizando validación cruzada agrupada por temporada. El mejor rendimiento lo obtuvo la **Máquina de Vectores de Soporte (SVM)**.
+
+| Modelo | CV Media (Pasado) | Test 2026 (Futuro Inédito) |
+| :--- | :---: | :---: |
+| **Support Vector Machine (SVM)** | **92.4%** | **90.0%** |
+| Regresión Logística | 92.0% | 88.5% |
+| Gradient Boosting | 91.4% | 88.9% |
+| Random Forest | 90.8% | 88.7% |
+
+**Métricas en Test (Temporada 2026):**
+*   **Accuracy:** 90.0%
+*   **Recall (Clase Buena):** 85% (El modelo detecta al 85% de los verdaderos jugadores de impacto).
+*   **F1-Score (Clase Buena):** 0.79
+*   **Diferencia CV vs Test:** Solo 2.4%. Esto demuestra una excelente capacidad de generalización sin sobreajuste (*overfitting*).
+
+## 🔮 Trabajo Futuro
+*   Implementar una interfaz web con **Streamlit** para visualización interactiva.
+*   Incorporar datos de *Tracking* (velocidad, distancia recorrida) si estuvieran disponibles.
+*   Probar modelos de *Ensemble* avanzados (XGBoost / LightGBM).
+
+---
+**Autor:** Poncho 
+**Contexto:** Proyecto de Análitica y Visualización de Datos (AyVD).
